@@ -17,14 +17,6 @@ def load_more_offer(driver):
             break
 
 
-def apartments_to_csv(file, apartments):
-    with open(file, 'w') as csv_file:
-        writer = csv.writer(csv_file)
-        for apart in apartments:
-            writer.writerow([apart['Apartment'], apart['Size'], apart['Rooms'],
-                             apart['Floor'], apart['Status'], apart['Link']])
-
-
 def find_apartments(soup):
     apartments = []
 
@@ -33,10 +25,18 @@ def find_apartments(soup):
         attributes = flat.text.strip().split('\n')
 
         apart['Apartment'] = attributes[0]
-        apart['Size'] = attributes[1]
-        apart['Rooms'] = attributes[2]
-        apart['Floor'] = attributes[3]
-        apart['Status'] = attributes[4]
+        apart['Size'] = float(attributes[1].split()[0])
+        apart['Rooms'] = int(attributes[2].split()[0])
+        if attributes[3].strip() == 'parter':
+            apart['Floor'] = 0
+        else:
+            apart['Floor'] = int(attributes[3].split()[1])
+
+        if attributes[4] == 'wolne':
+            apart['Status'] = 'free'
+        else:
+            apart['Status'] = 'sold'
+
         try:
             apart['Link'] = flat.a['href']
         except TypeError:
@@ -44,6 +44,15 @@ def find_apartments(soup):
         apartments.append(apart)
 
     return apartments
+
+
+def apartments_to_csv(file, apartments):
+    with open(file, 'w') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link'])
+        for apart in apartments:
+            writer.writerow([apart['Apartment'], apart['Size'], apart['Rooms'],
+                             apart['Floor'], apart['Status'], apart['Link']])
 
 
 def main():
