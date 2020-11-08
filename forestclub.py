@@ -4,6 +4,8 @@ from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import csv
+import os
+import datetime
 
 LINK = "https://www.forestclub.com.pl/wyszukaj/?flat-type=Mieszkanie&area=&room=&floor=#flats-list"
 
@@ -13,7 +15,7 @@ def load_more_offer(driver):
         try:
             button = driver.find_element_by_css_selector('button.btn.load_more_offer')
             button.click()
-        except Exception:
+        except:
             break
 
 
@@ -47,12 +49,27 @@ def find_apartments(soup):
 
 
 def apartments_to_csv(file, apartments):
-    with open(file, 'w') as csv_file:
+    with open(file, 'w+') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link'])
         for apart in apartments:
             writer.writerow([apart['Apartment'], apart['Size'], apart['Rooms'],
                              apart['Floor'], apart['Status'], apart['Link']])
+
+
+def stats_to_csv(file, apartments):
+    flats_total = len(apartments)
+    flats_free = len([x for x in apartments if x["Status"] == 'free'])
+    flats_sold = len([x for x in apartments if x["Status"] == 'sold'])
+
+    print(f"Total: {flats_total}, Free: {flats_free}, Sold: {flats_sold}")
+
+    stats_date = datetime.date.today()
+    with open(file, 'a+') as csv_file:
+        writer = csv.writer(csv_file)
+        if os.stat(file).st_size == 0:
+            writer.writerow(['Date', 'Flats total', 'Flats free', 'Flats sold'])
+        writer.writerow([stats_date, flats_total, flats_free, flats_sold])
 
 
 def main():
@@ -65,7 +82,8 @@ def main():
     soup = BeautifulSoup(html, "html.parser")
     apartments = find_apartments(soup)
 
-    apartments_to_csv("test.csv", apartments)
+    apartments_to_csv("apartments.csv", apartments)
+    stats_to_csv("stats.csv", apartments)
 
 
 if __name__ == '__main__':
