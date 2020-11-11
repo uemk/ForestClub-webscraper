@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import csv
@@ -144,7 +145,9 @@ def main() -> None:
     save found apartments and statistics in corresponding csv files,
     send notification email if statistics were different than the last time.
     """
-    driver = webdriver.Chrome(ChromeDriverManager().install())
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
     driver.get(LINK)
 
     load_more_offer(driver)
