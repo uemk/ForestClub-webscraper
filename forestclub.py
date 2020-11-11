@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 import csv
 import os
 import datetime
-import my_gmail
+import my_gmail  # own module to handle Gmail API
 from dotenv import load_dotenv
 
 # requires .env file with the following format (sender & recipient to be replaced by proper usernames):
@@ -16,12 +16,16 @@ load_dotenv()
 FROM_EMAIL = os.getenv("FROM_EMAIL")
 TO_EMAIL = os.getenv("TO_EMAIL")
 
+# search link for apartments
 LINK = "https://www.forestclub.com.pl/wyszukaj/?flat-type=Mieszkanie&area=&room=&floor=#flats-list"
-APART_PATH = "apartments.csv"
-STATS_PATH = "stats.csv"
+APART_PATH = "apartments.csv"  # path to save information about apartments
+STATS_PATH = "stats.csv"  # path to save statistics (numbers of total, free, sold flats...)
 
 
-def load_more_offer(driver):
+def load_more_offer(driver: webdriver.Chrome) -> None:
+    """
+    Expands the web page to show all available offers by clicking proper button with selenium webdriver.
+    """
     while True:
         try:
             button = driver.find_element_by_css_selector('button.btn.load_more_offer')
@@ -30,7 +34,10 @@ def load_more_offer(driver):
             break
 
 
-def find_apartments(soup):
+def find_apartments(soup: BeautifulSoup) -> list:
+    """
+    Finds all apartments in parsed webpage (BeautifulSoup object) and saves them in the list of dictionaries.
+    """
     apartments = []
 
     for flat in soup.find_all("tr", {"class": "active"}):
@@ -59,7 +66,10 @@ def find_apartments(soup):
     return apartments
 
 
-def apartments_to_csv(file, apartments):
+def apartments_to_csv(file: str, apartments: list) -> None:
+    """
+    Saves loaded apartments in a csv file.
+    """
     with open(file, 'w+') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link'])
@@ -68,7 +78,10 @@ def apartments_to_csv(file, apartments):
                              apart['Floor'], apart['Status'], apart['Link']])
 
 
-def stats_to_csv(file, apartments):
+def stats_to_csv(file: str, apartments: list) -> None:
+    """
+    Saves statistics concerning number of apartments (total, free, sold) in a csv file.
+    """
     stats = {'flats_total': len(apartments),
              'flats_free': len([x for x in apartments if x["Status"] == 'free']),
              'flats_sold': len([x for x in apartments if x["Status"] == 'sold'])}
@@ -83,7 +96,11 @@ def stats_to_csv(file, apartments):
         writer.writerow([stats_date, stats['flats_total'], stats['flats_free'], stats['flats_sold']])
 
 
-def check_stats_change(file):
+def check_stats_change(file: str) -> bool:
+    """
+    Compares the new statistics concerning number of apartments with the previous ones
+    and triggers sending properly formatted e-mail if statistics have been changed since last time.
+    """
     data = []
     with open(file, 'r') as csv_file:
         reader = csv.reader(csv_file)
@@ -91,14 +108,15 @@ def check_stats_change(file):
             if row:
                 data.append(row)
 
-    # compare the stats and send relevant notifications ny e-mail
+    # compare the stats and send relevant notifications by e-mail
     if len(data) >= 3:  # if there are previous status to compare with
         data[-1].pop(0)  # remove date info
         data[-2].pop(0)  # remove date info
         last = data[-1]
         before_last = data[-2]
         if last == before_last:
-            print("No changes since last time")
+            print('No changes since last time')
+            return False
         else:
             if last[0] > before_last[0]:
                 email_subject = 'New apartments available'
@@ -110,22 +128,29 @@ def check_stats_change(file):
             else:
                 email_subject = 'Total number of apartments decreased'
 
-            email_text = f"Please check the web page {LINK} or local {APART_PATH} file"
+            email_text = f'Please check the web page {LINK} or local {APART_PATH} file'
 
-            my_gmail.create_and_send_email(FROM_EMAIL, TO_EMAIL, "[ForestClub] "+email_subject, email_text)
-            print("Notification e-mail sent!")
+            my_gmail.create_and_send_email(FROM_EMAIL, TO_EMAIL, '[ForestClub] '+email_subject, email_text)
+            print('Notification e-mail sent!')
+            return True
     else:
-        print("No previous stats to compare with")
+        print('No previous stats to compare with')
+        return False
 
 
-def main():
+def main() -> None:
+    """
+    Triggers the functions to load all apartment offers from a given website, parse the website,
+    save found apartments and statistics in corresponding csv files,
+    send notification email if statistics were different than the last time.
+    """
     driver = webdriver.Chrome(ChromeDriverManager().install())
     driver.get(LINK)
 
     load_more_offer(driver)
 
     html = driver.page_source
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, 'html.parser')
     apartments = find_apartments(soup)
 
     apartments_to_csv(APART_PATH, apartments)
