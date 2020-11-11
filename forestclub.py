@@ -7,11 +7,18 @@ import csv
 import os
 import datetime
 import my_gmail
+from dotenv import load_dotenv
+
+# requires .env file with the following format (sender & recipient to be replaced by proper usernames):
+# FROM_EMAIL="sender@gmail.com"
+# TO_EMAIL="recipient@gmail.com"
+load_dotenv()
+FROM_EMAIL = os.getenv("FROM_EMAIL")
+TO_EMAIL = os.getenv("TO_EMAIL")
 
 LINK = "https://www.forestclub.com.pl/wyszukaj/?flat-type=Mieszkanie&area=&room=&floor=#flats-list"
 APART_PATH = "apartments.csv"
 STATS_PATH = "stats.csv"
-MY_EMAIL = "my_email@gmail.com"
 
 
 def load_more_offer(driver):
@@ -103,9 +110,9 @@ def check_stats_change(file):
             else:
                 email_subject = 'Total number of apartments decreased'
 
-            email_text = f"Please check the web page {LINK} or {APART_PATH} file"
+            email_text = f"Please check the web page {LINK} or local {APART_PATH} file"
 
-            my_gmail.create_and_send_email(MY_EMAIL, MY_EMAIL, "[ForestClub] "+email_subject, email_text)
+            my_gmail.create_and_send_email(FROM_EMAIL, TO_EMAIL, "[ForestClub] "+email_subject, email_text)
             print("Notification e-mail sent!")
     else:
         print("No previous stats to compare with")
