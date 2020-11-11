@@ -6,8 +6,12 @@ from bs4 import BeautifulSoup
 import csv
 import os
 import datetime
+import my_gmail
 
 LINK = "https://www.forestclub.com.pl/wyszukaj/?flat-type=Mieszkanie&area=&room=&floor=#flats-list"
+APART_PATH = "apartments.csv"
+STATS_PATH = "stats.csv"
+MY_EMAIL = "my_email@gmail.com"
 
 
 def load_more_offer(driver):
@@ -58,18 +62,53 @@ def apartments_to_csv(file, apartments):
 
 
 def stats_to_csv(file, apartments):
-    flats_total = len(apartments)
-    flats_free = len([x for x in apartments if x["Status"] == 'free'])
-    flats_sold = len([x for x in apartments if x["Status"] == 'sold'])
+    stats = {'flats_total': len(apartments),
+             'flats_free': len([x for x in apartments if x["Status"] == 'free']),
+             'flats_sold': len([x for x in apartments if x["Status"] == 'sold'])}
 
-    print(f"Total: {flats_total}, Free: {flats_free}, Sold: {flats_sold}")
+    print(f"Total: {stats['flats_total']}, Free: {stats['flats_free']}, Sold: {stats['flats_sold']}")
 
     stats_date = datetime.date.today()
     with open(file, 'a+') as csv_file:
         writer = csv.writer(csv_file)
         if os.stat(file).st_size == 0:
             writer.writerow(['Date', 'Flats total', 'Flats free', 'Flats sold'])
-        writer.writerow([stats_date, flats_total, flats_free, flats_sold])
+        writer.writerow([stats_date, stats['flats_total'], stats['flats_free'], stats['flats_sold']])
+
+
+def check_stats_change(file):
+    data = []
+    with open(file, 'r') as csv_file:
+        reader = csv.reader(csv_file)
+        for row in reader:
+            if row:
+                data.append(row)
+
+    # compare the stats and send relevant notifications ny e-mail
+    if len(data) >= 3:  # if there are previous status to compare with
+        data[-1].pop(0)  # remove date info
+        data[-2].pop(0)  # remove date info
+        last = data[-1]
+        before_last = data[-2]
+        if last == before_last:
+            print("No changes since last time")
+        else:
+            if last[0] > before_last[0]:
+                email_subject = 'New apartments available'
+            elif last[0] == before_last[0]:
+                if last[2] > before_last[2]:
+                    email_subject = 'Some apartment(s) sold'
+                else:
+                    email_subject = 'Some apartments returned to market'
+            else:
+                email_subject = 'Total number of apartments decreased'
+
+            email_text = f"Please check the web page {LINK} or {APART_PATH} file"
+
+            my_gmail.create_and_send_email(MY_EMAIL, MY_EMAIL, "[ForestClub] "+email_subject, email_text)
+            print("Notification e-mail sent!")
+    else:
+        print("No previous stats to compare with")
 
 
 def main():
@@ -82,8 +121,9 @@ def main():
     soup = BeautifulSoup(html, "html.parser")
     apartments = find_apartments(soup)
 
-    apartments_to_csv("apartments.csv", apartments)
-    stats_to_csv("stats.csv", apartments)
+    apartments_to_csv(APART_PATH, apartments)
+    stats_to_csv(STATS_PATH, apartments)
+    check_stats_change(STATS_PATH)
 
 
 if __name__ == '__main__':
