@@ -1,12 +1,14 @@
-# Apartments WebScraper (ForestClub)
+# ForestClub Web Scraper
+Apartments web scraper: https://www.forestclub.com.pl/
+
 ## Description
 ForestClub is a python program, written for purely PERSONAL NEEDS, 
 to automate tracking the changes in the following residential investment website: 
-https://www.forestclub.com.pl/.
+https://www.forestclub.com.pl/wyszukaj/?flat-type=Mieszkanie&area=&room=&floor=#flats-list.
 
 NOTE: the script aims to be used for several months from the date of creation 
 (as some updates are planned in this period) and its main goal is to send 
-the notification once the new apartments appear on the market for sale.
+the notification once the new apartments appear on the website for sale.
    
 ##  How it works?
 * scraps and parses a given site using selenium and Beautiful Soup
