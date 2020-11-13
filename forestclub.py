@@ -1,14 +1,18 @@
 #! /usr/bin/env python3
 
+"""Scrapes and parses specific website with apartments and triggers sending a notification e-mail if some statistics
+ concerning apartments available on the website have been changed since last time"""
+
+import os
+import datetime
+import csv
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
-import csv
-import os
-import datetime
-import my_gmail  # own module to handle Gmail API
 from dotenv import load_dotenv
+import my_gmail  # own module to handle Gmail API
+
 
 # requires .env file with the format as described in .env.example file
 load_dotenv()
