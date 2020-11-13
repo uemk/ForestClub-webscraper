@@ -4,3 +4,6 @@
 # note: need to wait a bit after reboot to allow pc connect to the Internet
 
 @reboot sleep 60 && /full/path/to/venv/bin/python3 /full/path/to/forestclub.py >> ~/cron.log 2>&1
+
+# alternatively, schedule each day at midnight:
+# @daily /full/path/to/venv/bin/python3 /full/path/to/forestclub.py >> ~/cron.log 2>&1
