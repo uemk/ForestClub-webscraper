@@ -10,17 +10,15 @@ import datetime
 import my_gmail  # own module to handle Gmail API
 from dotenv import load_dotenv
 
-# requires .env file with the following format (sender & recipient to be replaced by proper usernames):
-# FROM_EMAIL="sender@gmail.com"
-# TO_EMAIL="recipient@gmail.com"
+# requires .env file with the format as described in .env.example file
 load_dotenv()
-FROM_EMAIL = os.getenv("FROM_EMAIL")
-TO_EMAIL = os.getenv("TO_EMAIL")
+FROM_EMAIL = os.getenv('FROM_EMAIL')
+TO_EMAIL = os.getenv('TO_EMAIL')
 
 # search link for apartments
-LINK = "https://www.forestclub.com.pl/wyszukaj/?flat-type=Mieszkanie&area=&room=&floor=#flats-list"
-APART_PATH = "apartments.csv"  # path to save information about apartments
-STATS_PATH = "stats.csv"  # path to save statistics (numbers of total, free, sold flats...)
+LINK = 'https://www.forestclub.com.pl/wyszukaj/?flat-type=Mieszkanie&area=&room=&floor=#flats-list'
+APART_PATH = 'apartments.csv'  # path to save information about apartments
+STATS_PATH = 'stats.csv'  # path to save statistics (numbers of total, free, sold flats...)
 
 
 def load_more_offer(driver: webdriver.Chrome) -> None:
