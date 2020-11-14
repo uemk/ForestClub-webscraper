@@ -1,9 +1,5 @@
-# if you want to schedule automatic launch of the script - edit crontab by typing in shell: crontab -e
-# add the following line to crontab file (replace full/path/to/ with the project dir path in your environment)
-# in this example it will launch a program 1 min after each reboot
-# note: need to wait a bit after reboot to allow pc connect to the Internet
+# if you want to schedule automatic launch of the script edit crontab by typing in shell: crontab -e
+# add the following line to crontab file (replace full/path/to/ with your project path)
+# in this example it will launch a program once a day
 
-@reboot sleep 60 && /full/path/to/venv/bin/python3 /full/path/to/forestclub.py >> ~/cron.log 2>&1
-
-# alternatively, schedule each day at midnight:
-# @daily /full/path/to/venv/bin/python3 /full/path/to/forestclub.py >> ~/cron.log 2>&1
+@daily /full/path/to/venv/bin/python3 /full/path/to/forestclub.py >> ~/cron.log 2>&1
