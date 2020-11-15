@@ -3,10 +3,11 @@
 import pickle
 import os.path
 import base64
+from email.mime.text import MIMEText
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-from email.mime.text import MIMEText
+
 
 # pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
@@ -15,18 +16,19 @@ from email.mime.text import MIMEText
 # Create credentials and then download those creds, save it as credentials.json.
 
 # If modifying these scopes, delete the file token.pickle.
-SCOPES = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send']
+SCOPES = ['https://www.googleapis.com/auth/gmail.readonly',
+          'https://www.googleapis.com/auth/gmail.send']
 
 CREDENTIALS_PATH = 'credentials.json'
 TOKEN_PATH = 'token.pickle'
 
 
-def create_message(sender, to, subject, msg):
+def create_message(sender, recipient, subject, msg):
     """
     Creates an e-mail message based on sender, recipient, subject and content information.
     """
     message = MIMEText(msg)
-    message['to'] = to
+    message['to'] = recipient
     message['from'] = sender
     message['subject'] = subject
 
@@ -74,7 +76,8 @@ def create_credentials():
 
 def create_and_send_email(sender, recipient, subject, text):
     """
-    Triggers functions to create credentials, create the e-mail message and finally send it over the network.
+    Triggers functions to create credentials,
+    create the e-mail message and finally send it over the network.
     """
     creds = create_credentials()
     service = build('gmail', 'v1', credentials=creds)

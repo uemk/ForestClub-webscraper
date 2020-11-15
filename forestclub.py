@@ -1,7 +1,10 @@
 #! /usr/bin/env python3
 
-"""Scrapes and parses specific website with apartments and triggers sending a notification e-mail if some statistics
- concerning apartments available on the website have been changed since last time"""
+"""
+Scrapes and parses specific website with apartments
+and triggers sending a notification e-mail if some statistics
+concerning apartments available on the website have been changed since last time
+"""
 
 import os
 import datetime
@@ -22,24 +25,26 @@ TO_EMAIL = os.getenv('TO_EMAIL')
 # search link for apartments
 LINK = 'https://www.forestclub.com.pl/wyszukaj/?flat-type=Mieszkanie&area=&room=&floor=#flats-list'
 APART_PATH = 'apartments.csv'  # path to save information about apartments
-STATS_PATH = 'stats.csv'  # path to save statistics (numbers of total, free, sold flats...)
+STATS_PATH = 'stats.csv'  # path to save statistics
 
 
 def load_more_offer(driver: webdriver.Chrome) -> None:
     """
-    Expands the web page to show all available offers by clicking proper button with selenium webdriver.
+    Expands the web page to show all available offers
+    by clicking proper button with selenium web-driver.
     """
     while True:
-        try:
-            button = driver.find_element_by_css_selector('button.btn.load_more_offer')
+        button = driver.find_element_by_css_selector('button.btn.load_more_offer')
+        if button.is_displayed():
             button.click()
-        except:
+        else:
             break
 
 
 def find_apartments(soup: BeautifulSoup) -> list:
     """
-    Finds all apartments in parsed webpage (BeautifulSoup object) and saves them in the list of dictionaries.
+    Finds all apartments in parsed webpage (BeautifulSoup object)
+    and saves them in the list of dictionaries.
     """
     apartments = []
 
@@ -89,14 +94,17 @@ def stats_to_csv(file: str, apartments: list) -> None:
              'flats_free': len([x for x in apartments if x["Status"] == 'free']),
              'flats_sold': len([x for x in apartments if x["Status"] == 'sold'])}
 
-    print(f"Total: {stats['flats_total']}, Free: {stats['flats_free']}, Sold: {stats['flats_sold']}")
+    print(f"Total: {stats['flats_total']}, "
+          f"Free: {stats['flats_free']}, "
+          f"Sold: {stats['flats_sold']}")
 
     stats_date = datetime.date.today()
     with open(file, 'a+') as csv_file:
         writer = csv.writer(csv_file)
         if os.stat(file).st_size == 0:
             writer.writerow(['Date', 'Flats total', 'Flats free', 'Flats sold'])
-        writer.writerow([stats_date, stats['flats_total'], stats['flats_free'], stats['flats_sold']])
+        writer.writerow([stats_date, stats['flats_total'],
+                         stats['flats_free'], stats['flats_sold']])
 
 
 def check_stats_change(file: str) -> bool:
@@ -117,28 +125,32 @@ def check_stats_change(file: str) -> bool:
         data[-2].pop(0)  # remove date info
         last = data[-1]
         before_last = data[-2]
+
         if last == before_last:
             print('No changes since last time')
             return False
-        else:
-            if last[0] > before_last[0]:
-                email_subject = 'New apartments available'
-            elif last[0] == before_last[0]:
-                if last[2] > before_last[2]:
-                    email_subject = 'Some apartment(s) sold'
-                else:
-                    email_subject = 'Some apartments returned to market'
+
+        if last[0] > before_last[0]:
+            email_subject = 'New apartments available'
+        elif last[0] == before_last[0]:
+            if last[2] > before_last[2]:
+                email_subject = 'Some apartment(s) sold'
             else:
-                email_subject = 'Total number of apartments decreased'
+                email_subject = 'Some apartments returned to market'
+        else:
+            email_subject = 'Total number of apartments decreased'
 
-            email_text = f'Please check the web page {LINK} or local {APART_PATH} file'
+        email_text = f'Please check the web page {LINK} or local {APART_PATH} file'
 
-            my_gmail.create_and_send_email(FROM_EMAIL, TO_EMAIL, '[ForestClub] '+email_subject, email_text)
-            print('Notification e-mail sent!')
-            return True
-    else:
-        print('No previous stats to compare with')
-        return False
+        my_gmail.create_and_send_email(FROM_EMAIL,
+                                       TO_EMAIL,
+                                       '[ForestClub] ' + email_subject,
+                                       email_text)
+        print('Notification e-mail sent!')
+        return True
+
+    print('No previous stats to compare with')
+    return False
 
 
 def main() -> None:
