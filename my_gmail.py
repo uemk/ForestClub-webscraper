@@ -16,11 +16,11 @@ from google.auth.transport.requests import Request
 # Create credentials and then download those creds, save it as credentials.json.
 
 # If modifying these scopes, delete the file token.pickle.
-SCOPES = ['https://www.googleapis.com/auth/gmail.readonly',
-          'https://www.googleapis.com/auth/gmail.send']
+_SCOPES = ['https://www.googleapis.com/auth/gmail.readonly',
+           'https://www.googleapis.com/auth/gmail.send']
 
-CREDENTIALS_PATH = 'credentials.json'
-TOKEN_PATH = 'token.pickle'
+# path to your Gmail API credentials
+_CREDENTIALS_PATH = 'credentials.json'
 
 
 def create_message(sender, recipient, subject, msg):
@@ -36,18 +36,20 @@ def create_message(sender, recipient, subject, msg):
     b64_bytes = base64.urlsafe_b64encode(message.as_bytes())
     b64_string = b64_bytes.decode()
     return {'raw': b64_string}
-    # return {'raw': base64.urlsafe_b64encode(message.as_string())}
 
 
 def send_message(service, user_id, msg):
     """
     Sends the e-mail message.
     """
-    # try:
-    message = (service.users().messages().send(userId=user_id, body=msg).execute())
+    try:
+        message = (service.users().messages().send(userId=user_id, body=msg).execute())
+    except ConnectionError as err:
+        print(f'[ERROR]: {err}')
+        print('Unable to send an e-mail')
+        return None
     print(f"Message Id: {message['id']}")
     return message
-    # except errors.HttpError, error:print( 'An error occurred: %s' % error )
 
 
 def create_credentials():
@@ -56,20 +58,21 @@ def create_credentials():
     In case 'token.pickle' already exists it tries to loads the credentials from this file first.
     """
     creds = None
+    token_path = 'token.pickle'
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first time.
-    if os.path.exists(TOKEN_PATH):
-        with open(TOKEN_PATH, 'rb') as token:
+    if os.path.exists(token_path):
+        with open(token_path, 'rb') as token:
             creds = pickle.load(token)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(_CREDENTIALS_PATH, _SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open(TOKEN_PATH, 'wb') as token:
+        with open(token_path, 'wb') as token:
             pickle.dump(creds, token)
     return creds
 

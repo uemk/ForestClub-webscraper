@@ -16,16 +16,8 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import my_gmail  # own module to handle Gmail API
 
-
-# requires .env file with the format as described in .env.example file
-load_dotenv()
-FROM_EMAIL = os.getenv('FROM_EMAIL')
-TO_EMAIL = os.getenv('TO_EMAIL')
-
 # search link for apartments
-LINK = 'https://www.forestclub.com.pl/wyszukaj/?flat-type=Mieszkanie&area=&room=&floor=#flats-list'
-APART_PATH = 'apartments.csv'  # path to save information about apartments
-STATS_PATH = 'stats.csv'  # path to save statistics
+_LINK = 'https://www.forestclub.com.pl/wyszukaj/?flat-type=Mieszkanie&area=&room=&floor=#flats-list'
 
 
 def load_more_offer(driver: webdriver.Chrome) -> None:
@@ -68,7 +60,7 @@ def find_apartments(soup: BeautifulSoup) -> list:
         try:
             apart['Link'] = flat.a['href']
         except TypeError:
-            apart['Link'] = None
+            apart['Link'] = ''
         apartments.append(apart)
 
     return apartments
@@ -140,12 +132,16 @@ def check_stats_change(file: str) -> bool:
         else:
             email_subject = 'Total number of apartments decreased'
 
-        email_text = f'Please check the web page {LINK} or local {APART_PATH} file'
+        email_text = f'Please check the web page {_LINK} and local statistics file'
 
-        my_gmail.create_and_send_email(FROM_EMAIL,
-                                       TO_EMAIL,
-                                       '[ForestClub] ' + email_subject,
-                                       email_text)
+        # requires .env file
+        load_dotenv()
+        from_email = os.getenv('FROM_EMAIL')
+        to_email = os.getenv('TO_EMAIL')
+
+        my_gmail.create_and_send_email(from_email, to_email,
+                                       '[ForestClub] '+email_subject, email_text)
+
         print('Notification e-mail sent!')
         return True
 
@@ -159,10 +155,14 @@ def main() -> None:
     save found apartments and statistics in corresponding csv files,
     send notification email if statistics were different than the last time.
     """
+
+    apart_path = 'apartments.csv'  # path to save information about apartments
+    stats_path = 'stats.csv'  # path to save statistics
+
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
-    driver.get(LINK)
+    driver.get(_LINK)
 
     load_more_offer(driver)
 
@@ -170,9 +170,9 @@ def main() -> None:
     soup = BeautifulSoup(html, 'html.parser')
     apartments = find_apartments(soup)
 
-    apartments_to_csv(APART_PATH, apartments)
-    stats_to_csv(STATS_PATH, apartments)
-    check_stats_change(STATS_PATH)
+    apartments_to_csv(apart_path, apartments)
+    stats_to_csv(stats_path, apartments)
+    check_stats_change(stats_path)
 
 
 if __name__ == '__main__':
