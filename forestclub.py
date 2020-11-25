@@ -9,6 +9,7 @@ concerning apartments available on the website have been changed since last time
 import os
 import datetime
 import csv
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
@@ -45,10 +46,10 @@ def find_apartments(soup: BeautifulSoup) -> list:
         attributes = flat.text.strip().split('\n')
 
         apart['Apartment'] = attributes[0]
-        apart['Size'] = float(attributes[1].split()[0])
-        apart['Rooms'] = int(attributes[2].split()[0])
+        apart['Size'] = attributes[1].split()[0]
+        apart['Rooms'] = attributes[2].split()[0]
         if attributes[3].strip() == 'parter':
-            apart['Floor'] = 0
+            apart['Floor'] = '0'
         else:
             apart['Floor'] = int(attributes[3].split()[1])
 
@@ -78,6 +79,21 @@ def apartments_to_csv(file: str, apartments: list) -> None:
                              apart['Floor'], apart['Status'], apart['Link']])
 
 
+def from_csv_to_apartments(file: str) -> list:
+    apartments = []
+    headers = ['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link']
+    with open(file, 'r') as csv_file:
+        reader = csv.reader(csv_file)
+        next(reader)
+        for row in reader:
+            if row:
+                apart = {}
+                for index, key in enumerate(headers):
+                    apart[key] = row[index]
+                apartments.append(apart)
+    return apartments
+
+
 def stats_to_csv(file: str, apartments: list) -> None:
     """
     Saves statistics concerning number of apartments (total, free, sold) in a csv file.
@@ -99,13 +115,13 @@ def stats_to_csv(file: str, apartments: list) -> None:
                          stats['flats_free'], stats['flats_sold']])
 
 
-def check_stats_change(file: str) -> bool:
+def check_stats_change(file_stats: str) -> bool:
     """
     Compares the new statistics concerning number of apartments with the previous ones
     and triggers sending properly formatted e-mail if statistics have been changed since last time.
     """
     data = []
-    with open(file, 'r') as csv_file:
+    with open(file_stats, 'r') as csv_file:
         reader = csv.reader(csv_file)
         for row in reader:
             if row:
@@ -132,7 +148,7 @@ def check_stats_change(file: str) -> bool:
         else:
             email_subject = 'Total number of apartments decreased'
 
-        email_text = f'Please check the web page {_LINK} and local statistics file'
+        email_text = f'Please check the web page {_LINK} and local statistics files'
 
         # requires .env file
         load_dotenv()
@@ -140,7 +156,7 @@ def check_stats_change(file: str) -> bool:
         to_email = os.getenv('TO_EMAIL')
 
         my_gmail.create_and_send_email(from_email, to_email,
-                                       '[ForestClub] '+email_subject, email_text)
+                                       '[ForestClub] ' + email_subject, email_text)
 
         print('Notification e-mail sent!')
         return True
@@ -170,9 +186,13 @@ def main() -> None:
     soup = BeautifulSoup(html, 'html.parser')
     apartments = find_apartments(soup)
 
-    apartments_to_csv(apart_path, apartments)
     stats_to_csv(stats_path, apartments)
     check_stats_change(stats_path)
+    apartments_to_csv(apart_path, apartments)
+
+    # a = from_csv_to_apartments(apart_path)
+    # print(a)
+    # print(len(a))
 
 
 if __name__ == '__main__':
