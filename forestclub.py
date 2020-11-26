@@ -9,12 +9,15 @@ concerning apartments available on the website have been changed since last time
 import os
 import datetime
 import csv
+from typing import List, Any
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+from tabulate import tabulate
+
 import my_gmail  # own module to handle Gmail API
 
 # search link for apartments
@@ -51,7 +54,7 @@ def find_apartments(soup: BeautifulSoup) -> list:
         if attributes[3].strip() == 'parter':
             apart['Floor'] = '0'
         else:
-            apart['Floor'] = int(attributes[3].split()[1])
+            apart['Floor'] = attributes[3].split()[1]
 
         if attributes[4] == 'wolne':
             apart['Status'] = 'free'
@@ -62,7 +65,26 @@ def find_apartments(soup: BeautifulSoup) -> list:
             apart['Link'] = flat.a['href']
         except TypeError:
             apart['Link'] = ''
-        apartments.append(apart)
+        finally:
+            apartments.append(apart)
+
+    return apartments
+
+
+def webscrape_apartments(link: str):
+    """
+    Scraps the webpage using selenium driver and beautiful soup to find data about apartments.
+    """
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
+    driver.get(link)
+
+    load_more_offer(driver)
+
+    html = driver.page_source
+    soup = BeautifulSoup(html, 'html.parser')
+    apartments = find_apartments(soup)
 
     return apartments
 
@@ -79,19 +101,43 @@ def apartments_to_csv(file: str, apartments: list) -> None:
                              apart['Floor'], apart['Status'], apart['Link']])
 
 
-def from_csv_to_apartments(file: str) -> list:
+def csv_to_apartments(file: str) -> list:
+    """
+    Creates the list of dictionaries from data about apartments in csv file.
+    """
     apartments = []
     headers = ['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link']
-    with open(file, 'r') as csv_file:
-        reader = csv.reader(csv_file)
-        next(reader)
-        for row in reader:
-            if row:
-                apart = {}
-                for index, key in enumerate(headers):
-                    apart[key] = row[index]
-                apartments.append(apart)
-    return apartments
+    try:
+        with open(file, 'r') as csv_file:
+            reader = csv.reader(csv_file)
+            next(reader)
+            for row in reader:
+                if row:
+                    apart = {}
+                    for index, key in enumerate(headers):
+                        apart[key] = row[index]
+                    apartments.append(apart)
+    except OSError as err:
+        print(err)
+    finally:
+        return apartments
+
+
+def compare_apartment_lists(apart_old: list, apart_new: list):
+    """
+    Compares the two lists of dictionaries and returns the difference formatted in table view.
+    """
+    diff = [flat for flat in apart_new if flat not in apart_old]
+    if not apart_old or not diff:
+        return ''
+
+    headers = ['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link']
+    tab_data = []
+    for flat in diff:
+        tab_data.append(flat.values())
+
+    diff_table = tabulate(tab_data, headers=headers)
+    return diff_table
 
 
 def stats_to_csv(file: str, apartments: list) -> None:
@@ -115,7 +161,7 @@ def stats_to_csv(file: str, apartments: list) -> None:
                          stats['flats_free'], stats['flats_sold']])
 
 
-def check_stats_change(file_stats: str) -> bool:
+def send_email_upon_change(file_stats: str, flat_diff: str) -> bool:
     """
     Compares the new statistics concerning number of apartments with the previous ones
     and triggers sending properly formatted e-mail if statistics have been changed since last time.
@@ -148,7 +194,9 @@ def check_stats_change(file_stats: str) -> bool:
         else:
             email_subject = 'Total number of apartments decreased'
 
-        email_text = f'Please check the web page {_LINK} and local statistics files'
+        email_text = f'Please check the web page {_LINK} or local statistics files\n\n' \
+                     f'The changes correspond to the following apartment(s):\n\n' \
+                     f'{flat_diff}'
 
         # requires .env file
         load_dotenv()
@@ -175,24 +223,21 @@ def main() -> None:
     apart_path = 'apartments.csv'  # path to save information about apartments
     stats_path = 'stats.csv'  # path to save statistics
 
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
-    driver.get(_LINK)
+    # list of apartments from website
+    apartments = webscrape_apartments(_LINK)
+    # list of apartments from existing local csv file
+    apartments_old = csv_to_apartments(apart_path)
+    # formatted string with changes concerning apartments
+    flat_diff = compare_apartment_lists(apartments_old, apartments)
+    # print(flat_diff)
 
-    load_more_offer(driver)
-
-    html = driver.page_source
-    soup = BeautifulSoup(html, 'html.parser')
-    apartments = find_apartments(soup)
-
+    # appends stats to file (creates file if doesn't exist)
     stats_to_csv(stats_path, apartments)
-    check_stats_change(stats_path)
-    apartments_to_csv(apart_path, apartments)
+    # compares stats and sends proper notification upon change
+    change = send_email_upon_change(stats_path, flat_diff)
 
-    # a = from_csv_to_apartments(apart_path)
-    # print(a)
-    # print(len(a))
+    if change or not os.path.exists(apart_path):
+        apartments_to_csv(apart_path, apartments)  # saves apartments data in csv
 
 
 if __name__ == '__main__':
