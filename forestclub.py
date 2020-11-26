@@ -9,7 +9,6 @@ concerning apartments available on the website have been changed since last time
 import os
 import datetime
 import csv
-from typing import List, Any
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
