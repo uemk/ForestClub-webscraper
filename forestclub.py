@@ -221,6 +221,8 @@ def main() -> None:
     headers = ['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link']
     stats_path = 'stats.csv'  # path to save statistics
 
+    assert (len(headers) == 6), 'Wrong number of apartments attributes (headers)!'
+
     # list of apartments from website
     apartments = webscrape_apartments(_LINK, headers)
     # list of apartments from existing local csv file
