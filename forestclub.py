@@ -43,6 +43,8 @@ def find_apartments(soup: BeautifulSoup, headers: list) -> list:
     """
     apartments = []
 
+    assert (len(headers) == 6), 'Wrong number of apartments attributes (headers)!'
+
     for flat in soup.find_all("tr", {"class": "active"}):
         apart = {}
         attributes = flat.text.strip().split('\n')
@@ -220,8 +222,6 @@ def main() -> None:
     apart_path = 'apartments.csv'  # path to save information about apartments
     headers = ['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link']
     stats_path = 'stats.csv'  # path to save statistics
-
-    assert (len(headers) == 6), 'Wrong number of apartments attributes (headers)!'
 
     # list of apartments from website
     apartments = webscrape_apartments(_LINK, headers)
