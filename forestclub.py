@@ -36,7 +36,7 @@ def load_more_offer(driver: webdriver.Chrome) -> None:
             break
 
 
-def find_apartments(soup: BeautifulSoup) -> list:
+def find_apartments(soup: BeautifulSoup, headers: list) -> list:
     """
     Finds all apartments in parsed webpage (BeautifulSoup object)
     and saves them in the list of dictionaries.
@@ -47,30 +47,31 @@ def find_apartments(soup: BeautifulSoup) -> list:
         apart = {}
         attributes = flat.text.strip().split('\n')
 
-        apart['Apartment'] = attributes[0]
-        apart['Size'] = attributes[1].split()[0]
-        apart['Rooms'] = attributes[2].split()[0]
+        apart[headers[0]] = attributes[0]
+        apart[headers[1]] = attributes[1].split()[0]
+        apart[headers[2]] = attributes[2].split()[0]
         if attributes[3].strip() == 'parter':
-            apart['Floor'] = '0'
+            apart[headers[3]] = '0'
         else:
-            apart['Floor'] = attributes[3].split()[1]
+            apart[headers[3]] = attributes[3].split()[1]
 
         if attributes[4] == 'wolne':
-            apart['Status'] = 'free'
+            apart[headers[4]] = 'free'
         else:
-            apart['Status'] = 'sold'
+            apart[headers[4]] = 'sold'
 
         try:
-            apart['Link'] = flat.a['href']
+            apart[headers[5]] = flat.a['href']
         except TypeError:
-            apart['Link'] = ''
+            apart[headers[5]] = ''
+
         finally:
             apartments.append(apart)
 
     return apartments
 
 
-def webscrape_apartments(link: str):
+def webscrape_apartments(link: str, headers: list) -> list:
     """
     Scraps the webpage using selenium driver and beautiful soup to find data about apartments.
     """
@@ -83,29 +84,27 @@ def webscrape_apartments(link: str):
 
     html = driver.page_source
     soup = BeautifulSoup(html, 'html.parser')
-    apartments = find_apartments(soup)
+    apartments = find_apartments(soup, headers)
 
     return apartments
 
 
-def apartments_to_csv(file: str, apartments: list) -> None:
+def apartments_to_csv(file: str, apartments: list, headers: list) -> None:
     """
     Saves loaded apartments in a csv file.
     """
     with open(file, 'w+') as csv_file:
         writer = csv.writer(csv_file)
-        writer.writerow(['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link'])
+        writer.writerow(headers)
         for apart in apartments:
-            writer.writerow([apart['Apartment'], apart['Size'], apart['Rooms'],
-                             apart['Floor'], apart['Status'], apart['Link']])
+            writer.writerow([apart[headers[i]] for i in range(len(headers))])
 
 
-def csv_to_apartments(file: str) -> list:
+def csv_to_apartments(file: str, headers: list) -> list:
     """
     Creates the list of dictionaries from data about apartments in csv file.
     """
     apartments = []
-    headers = ['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link']
     try:
         with open(file, 'r') as csv_file:
             reader = csv.reader(csv_file)
@@ -122,7 +121,7 @@ def csv_to_apartments(file: str) -> list:
         return apartments
 
 
-def compare_apartment_lists(apart_old: list, apart_new: list):
+def compare_apartment_lists(apart_old: list, apart_new: list, headers: list) -> str:
     """
     Compares the two lists of dictionaries and returns the difference formatted in table view.
     """
@@ -130,7 +129,6 @@ def compare_apartment_lists(apart_old: list, apart_new: list):
     if not apart_old or not diff:
         return ''
 
-    headers = ['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link']
     tab_data = []
     for flat in diff:
         tab_data.append(flat.values())
@@ -220,14 +218,15 @@ def main() -> None:
     """
 
     apart_path = 'apartments.csv'  # path to save information about apartments
+    headers = ['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link']
     stats_path = 'stats.csv'  # path to save statistics
 
     # list of apartments from website
-    apartments = webscrape_apartments(_LINK)
+    apartments = webscrape_apartments(_LINK, headers)
     # list of apartments from existing local csv file
-    apartments_old = csv_to_apartments(apart_path)
+    apartments_old = csv_to_apartments(apart_path, headers)
     # formatted string with changes concerning apartments
-    flat_diff = compare_apartment_lists(apartments_old, apartments)
+    flat_diff = compare_apartment_lists(apartments_old, apartments, headers)
     # print(flat_diff)
 
     # appends stats to file (creates file if doesn't exist)
@@ -236,7 +235,7 @@ def main() -> None:
     change = send_email_upon_change(stats_path, flat_diff)
 
     if change or not os.path.exists(apart_path):
-        apartments_to_csv(apart_path, apartments)  # saves apartments data in csv
+        apartments_to_csv(apart_path, apartments, headers)  # saves apartments data in csv
 
 
 if __name__ == '__main__':
