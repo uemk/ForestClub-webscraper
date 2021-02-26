@@ -16,6 +16,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from tabulate import tabulate
+from typing import List
 
 import my_gmail  # own module to handle Gmail API
 
@@ -36,7 +37,7 @@ def load_more_offer(driver: webdriver.Chrome) -> None:
             break
 
 
-def find_apartments(soup: BeautifulSoup, headers: list) -> list:
+def find_apartments(soup: BeautifulSoup, headers: List[str]) -> List[dict]:
     """
     Finds all apartments in parsed webpage (BeautifulSoup object)
     and saves them in the list of dictionaries.
@@ -73,7 +74,7 @@ def find_apartments(soup: BeautifulSoup, headers: list) -> list:
     return apartments
 
 
-def webscrape_apartments(link: str, headers: list) -> list:
+def webscrape_apartments(link: str, headers: List[str]) -> List[dict]:
     """
     Scraps the webpage using selenium driver and beautiful soup to find data about apartments.
     """
@@ -91,7 +92,7 @@ def webscrape_apartments(link: str, headers: list) -> list:
     return apartments
 
 
-def apartments_to_csv(file: str, apartments: list, headers: list) -> None:
+def apartments_to_csv(file: str, apartments: List[dict], headers: List[str]) -> None:
     """
     Saves loaded apartments in a csv file.
     """
@@ -102,7 +103,7 @@ def apartments_to_csv(file: str, apartments: list, headers: list) -> None:
             writer.writerow([apart[headers[i]] for i in range(len(headers))])
 
 
-def csv_to_apartments(file: str, headers: list) -> list:
+def csv_to_apartments(file: str, headers: List[str]) -> List[dict]:
     """
     Creates the list of dictionaries from data about apartments in csv file.
     """
@@ -123,7 +124,7 @@ def csv_to_apartments(file: str, headers: list) -> list:
         return apartments
 
 
-def compare_apartment_lists(apart_old: list, apart_new: list, headers: list) -> str:
+def compare_apartment_lists(apart_old: List[dict], apart_new: List[dict], headers: List[str]) -> str:
     """
     Compares the two lists of dictionaries and returns the difference formatted in table view.
     """
@@ -139,7 +140,7 @@ def compare_apartment_lists(apart_old: list, apart_new: list, headers: list) -> 
     return diff_table
 
 
-def stats_to_csv(file: str, apartments: list) -> None:
+def stats_to_csv(file: str, apartments: List[dict]) -> None:
     """
     Saves statistics concerning number of apartments (total, free, sold) in a csv file.
     """
@@ -160,7 +161,7 @@ def stats_to_csv(file: str, apartments: list) -> None:
                          stats['flats_free'], stats['flats_sold']])
 
 
-def csv_file_to_list(file: str) -> list:
+def csv_file_to_list(file: str) -> List[list]:
     """ Loads csv file into list of rows """
     data = []
     with open(file, 'r') as csv_file:
