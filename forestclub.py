@@ -160,17 +160,23 @@ def stats_to_csv(file: str, apartments: list) -> None:
                          stats['flats_free'], stats['flats_sold']])
 
 
+def csv_file_to_list(file: str) -> list:
+    """ Loads csv file into list of rows """
+    data = []
+    with open(file, 'r') as csv_file:
+        reader = csv.reader(csv_file)
+        for row in reader:
+            if row:
+                data.append(row)
+    return data
+
+
 def send_email_upon_change(file_stats: str, flat_diff: str) -> bool:
     """
     Compares the new statistics concerning number of apartments with the previous ones
     and triggers sending properly formatted e-mail if statistics have been changed since last time.
     """
-    data = []
-    with open(file_stats, 'r') as csv_file:
-        reader = csv.reader(csv_file)
-        for row in reader:
-            if row:
-                data.append(row)
+    data = csv_file_to_list(file_stats)
 
     # compare the stats and send relevant notifications by e-mail
     if len(data) >= 3:  # if there are previous status to compare with
