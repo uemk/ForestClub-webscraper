@@ -1,9 +1,12 @@
 #! /usr/bin/env python3
 
-"""
+"""ForestClub website scrapper
+
 Scrapes and parses specific website with apartments
 and triggers sending a notification e-mail if some statistics
 concerning apartments available on the website have been changed since last time
+
+Script aims to be launched periodically with some workflow manager such as cron
 """
 
 import os
@@ -25,10 +28,10 @@ _LINK = 'https://www.forestclub.com.pl/wyszukaj/?flat-type=Mieszkanie&area=&room
 
 
 def load_more_offer(driver: webdriver.Chrome) -> None:
+    """Expands the web page to show all available offers
+    by clicking proper button with selenium web-driver
     """
-    Expands the web page to show all available offers
-    by clicking proper button with selenium web-driver.
-    """
+
     while True:
         button = driver.find_element_by_css_selector('button.btn.load_more_offer')
         if button.is_displayed():
@@ -38,9 +41,8 @@ def load_more_offer(driver: webdriver.Chrome) -> None:
 
 
 def find_apartments(soup: BeautifulSoup, headers: List[str]) -> List[dict]:
-    """
-    Finds all apartments in parsed webpage (BeautifulSoup object)
-    and saves them in the list of dictionaries.
+    """Finds all apartments in parsed webpage (BeautifulSoup object)
+    and saves them in the list of dictionaries
     """
     apartments = []
 
@@ -75,9 +77,8 @@ def find_apartments(soup: BeautifulSoup, headers: List[str]) -> List[dict]:
 
 
 def webscrape_apartments(link: str, headers: List[str]) -> List[dict]:
-    """
-    Scraps the webpage using selenium driver and beautiful soup to find data about apartments.
-    """
+    """Scraps the webpage using selenium driver and beautiful soup"""
+
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
@@ -93,9 +94,8 @@ def webscrape_apartments(link: str, headers: List[str]) -> List[dict]:
 
 
 def apartments_to_csv(file: str, apartments: List[dict], headers: List[str]) -> None:
-    """
-    Saves loaded apartments in a csv file.
-    """
+    """Saves loaded apartments in a csv file"""
+
     with open(file, 'w+') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(headers)
@@ -104,9 +104,8 @@ def apartments_to_csv(file: str, apartments: List[dict], headers: List[str]) -> 
 
 
 def csv_to_apartments(file: str, headers: List[str]) -> List[dict]:
-    """
-    Creates the list of dictionaries from data about apartments in csv file.
-    """
+    """Creates the list of dictionaries from data about apartments in csv file"""
+
     apartments = []
     try:
         with open(file, 'r') as csv_file:
@@ -125,7 +124,7 @@ def csv_to_apartments(file: str, headers: List[str]) -> List[dict]:
 
 
 def compare_apartment_lists(apart_old: List[dict], apart_new: List[dict]) -> list:
-    """ Compares the two lists of apartments and returns the difference """
+    """Compares the two lists of apartments and returns the difference"""
 
     diff = [flat for flat in apart_new if flat not in apart_old]
     if not apart_old or not diff:
@@ -134,7 +133,7 @@ def compare_apartment_lists(apart_old: List[dict], apart_new: List[dict]) -> lis
 
 
 def tabulate_apartments_diff(diff: List[dict], headers: List[str]) -> str:
-    """ Returns the list of apartments formatted in table view """
+    """Returns the list of apartments formatted in table view"""
 
     tab_data = []
     for flat in diff:
@@ -145,9 +144,8 @@ def tabulate_apartments_diff(diff: List[dict], headers: List[str]) -> str:
 
 
 def stats_to_csv(file: str, apartments: List[dict]) -> None:
-    """
-    Saves statistics concerning number of apartments (total, free, sold) in a csv file.
-    """
+    """Saves statistics concerning number of apartments (total, free, sold) in a csv file"""
+
     stats = {'flats_total': len(apartments),
              'flats_free': len([x for x in apartments if x["Status"] == 'free']),
              'flats_sold': len([x for x in apartments if x["Status"] == 'sold'])}
@@ -166,7 +164,8 @@ def stats_to_csv(file: str, apartments: List[dict]) -> None:
 
 
 def csv_file_to_list(file: str) -> List[list]:
-    """ Loads csv file into list of rows """
+    """Loads csv file into list of rows"""
+
     data = []
     with open(file, 'r') as csv_file:
         reader = csv.reader(csv_file)
@@ -177,10 +176,10 @@ def csv_file_to_list(file: str) -> List[list]:
 
 
 def send_email_upon_change(file_stats: str, flat_diff: str) -> bool:
+    """Compares the new statistics concerning number of apartments with the previous ones
+    and triggers sending properly formatted e-mail if statistics have been changed.
     """
-    Compares the new statistics concerning number of apartments with the previous ones
-    and triggers sending properly formatted e-mail if statistics have been changed since last time.
-    """
+
     data = csv_file_to_list(file_stats)
 
     # compare the stats and send relevant notifications by e-mail
@@ -231,9 +230,8 @@ def send_email_upon_change(file_stats: str, flat_diff: str) -> bool:
 
 
 def main() -> None:
-    """
-    Triggers the functions to load all apartment offers from a given website, parse the website,
-    save found apartments and statistics in corresponding csv files,
+    """Triggers the functions to load all apartment offers from a given website,
+    parse the website, save found apartments and statistics in corresponding csv files,
     send notification email if statistics were different than the last time.
     """
 
