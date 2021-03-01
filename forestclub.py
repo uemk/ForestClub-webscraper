@@ -197,7 +197,7 @@ def send_email_upon_change(file_stats: str, flat_diff: str) -> bool:
         subject = {
             'new': 'New apartments available',
             'sold': 'Some apartment(s) sold',
-            'returned': 'Total number of apartments decreased',
+            'returned': 'Some apartment(s) returned to the market',
             'less': 'Total number of apartments decreased',
         }
 
