@@ -124,13 +124,17 @@ def csv_to_apartments(file: str, headers: List[str]) -> List[dict]:
         return apartments
 
 
-def compare_apartment_lists(apart_old: List[dict], apart_new: List[dict], headers: List[str]) -> str:
-    """
-    Compares the two lists of dictionaries and returns the difference formatted in table view.
-    """
+def compare_apartment_lists(apart_old: List[dict], apart_new: List[dict]) -> list:
+    """ Compares the two lists of apartments and returns the difference """
+
     diff = [flat for flat in apart_new if flat not in apart_old]
     if not apart_old or not diff:
-        return ''
+        return []
+    return diff
+
+
+def tabulate_apartments_diff(diff: List[dict], headers: List[str]) -> str:
+    """ Returns the list of apartments formatted in table view """
 
     tab_data = []
     for flat in diff:
@@ -190,15 +194,22 @@ def send_email_upon_change(file_stats: str, flat_diff: str) -> bool:
             print('No changes since last time')
             return False
 
+        subject = {
+            'new': 'New apartments available',
+            'sold': 'Some apartment(s) sold',
+            'returned': 'Total number of apartments decreased',
+            'less': 'Total number of apartments decreased',
+        }
+
         if last[0] > before_last[0]:
-            email_subject = 'New apartments available'
+            email_subject = subject['new']
         elif last[0] == before_last[0]:
             if last[2] > before_last[2]:
-                email_subject = 'Some apartment(s) sold'
+                email_subject = subject['sold']
             else:
-                email_subject = 'Some apartments returned to market'
+                email_subject = subject['returned']
         else:
-            email_subject = 'Total number of apartments decreased'
+            email_subject = subject['less']
 
         email_text = f'Please check the web page {_LINK} or local statistics files\n\n' \
                      f'The changes correspond to the following apartment(s):\n\n' \
@@ -228,20 +239,25 @@ def main() -> None:
 
     apart_path = 'apartments.csv'  # path to save information about apartments
     headers = ['Apartment', 'Size', 'Rooms', 'Floor', 'Status', 'Link']
-    stats_path = 'stats.csv'  # path to save statistics
+    stats_path = 'stats.csv'  # path to save statistics [total, free, sold]
 
     # list of apartments from website
     apartments = webscrape_apartments(_LINK, headers)
+
     # list of apartments from existing local csv file
     apartments_old = csv_to_apartments(apart_path, headers)
+
+    # list of changes in available apartments compared to previously saved apartments
+    flat_diff = compare_apartment_lists(apartments_old, apartments)
+
     # formatted string with changes concerning apartments
-    flat_diff = compare_apartment_lists(apartments_old, apartments, headers)
-    # print(flat_diff)
+    formatted_flat_diff = tabulate_apartments_diff(flat_diff, headers)
 
     # appends stats to file (creates file if doesn't exist)
     stats_to_csv(stats_path, apartments)
+
     # compares stats and sends proper notification upon change
-    change = send_email_upon_change(stats_path, flat_diff)
+    change = send_email_upon_change(stats_path, formatted_flat_diff)
 
     if change or not os.path.exists(apart_path):
         apartments_to_csv(apart_path, apartments, headers)  # saves apartments data in csv
